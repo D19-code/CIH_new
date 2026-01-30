@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.routers import hospitals, ehr, predictions
+app.include_router(hospitals.router)
 
 # Create database tables
 #Base.metadata.create_all(bind=engine)
