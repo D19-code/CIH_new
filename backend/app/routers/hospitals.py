@@ -7,28 +7,46 @@ Endpoints:
 - GET /api/hospitals/{hospital_id} - Get specific hospital details
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, status
 from typing import List
-from app.database import get_db
-from app.models.hospital import Hospital
 from app.schemas.hospital import HospitalCreate, HospitalResponse
 
 router = APIRouter()
 
+# =========================================================
+# MOCK DATABASE (used for deployment/demo – no PostgreSQL)
+# =========================================================
 
-@router.post("/hospitals", response_model=HospitalResponse, status_code=status.HTTP_201_CREATED)
-async def create_hospital(
-    hospital: HospitalCreate,
-    db: Session = Depends(get_db)
-):
+HOSPITALS_DB = [
+    {
+        "id": 1,
+        "name": "City General Hospital",
+        "location": "Delhi",
+        "total_beds": 250,
+        "icu_beds": 50
+    },
+    {
+        "id": 2,
+        "name": "Metro Care Hospital",
+        "location": "Mumbai",
+        "total_beds": 180,
+        "icu_beds": 30
+    }
+]
+
+
+@router.post(
+    "/hospitals",
+    response_model=HospitalResponse,
+    status_code=status.HTTP_201_CREATED
+)
+async def create_hospital(hospital: HospitalCreate):
     """
     Create a new hospital in the system
-    
+
     Args:
         hospital: Hospital data including name, location, and bed capacity
-        db: Database session
-        
+
     Returns:
         Created hospital with assigned ID
     """
@@ -38,61 +56,57 @@ async def create_hospital(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="ICU beds cannot exceed total beds"
         )
-    
-    # Create new hospital instance
-    db_hospital = Hospital(**hospital.model_dump())
-    db.add(db_hospital)
-    db.commit()
-    db.refresh(db_hospital)
-    
-    return db_hospital
+
+    new_hospital = hospital.model_dump()
+    new_hospital["id"] = len(HOSPITALS_DB) + 1
+
+    HOSPITALS_DB.append(new_hospital)
+    return new_hospital
 
 
-@router.get("/hospitals", response_model=List[HospitalResponse])
+@router.get(
+    "/hospitals",
+    response_model=List[HospitalResponse]
+)
 async def get_hospitals(
     skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    limit: int = 100
 ):
     """
     Retrieve all hospitals with pagination
-    
+
     Args:
         skip: Number of records to skip (for pagination)
         limit: Maximum number of records to return
-        db: Database session
-        
+
     Returns:
         List of hospitals
     """
-    hospitals = db.query(Hospital).offset(skip).limit(limit).all()
-    return hospitals
+    return HOSPITALS_DB[skip : skip + limit]
 
 
-@router.get("/hospitals/{hospital_id}", response_model=HospitalResponse)
-async def get_hospital(
-    hospital_id: int,
-    db: Session = Depends(get_db)
-):
+@router.get(
+    "/hospitals/{hospital_id}",
+    response_model=HospitalResponse
+)
+async def get_hospital(hospital_id: int):
     """
     Get specific hospital by ID
-    
+
     Args:
         hospital_id: Hospital ID
-        db: Database session
-        
+
     Returns:
         Hospital details
-        
+
     Raises:
         404: Hospital not found
     """
-    hospital = db.query(Hospital).filter(Hospital.id == hospital_id).first()
-    
-    if not hospital:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Hospital with ID {hospital_id} not found"
-        )
-    
-    return hospital
+    for hospital in HOSPITALS_DB:
+        if hospital["id"] == hospital_id:
+            return hospital
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Hospital with ID {hospital_id} not found"
+    )
