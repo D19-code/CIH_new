@@ -16,7 +16,7 @@ from app.database import engine, Base
 from app.routers import hospitals, ehr, predictions
 
 # Create database tables
-Base.metadata.create_all(bind=engine)
+#Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
 app = FastAPI(
