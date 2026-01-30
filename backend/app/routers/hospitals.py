@@ -11,7 +11,8 @@ from fastapi import APIRouter, HTTPException, status
 from typing import List
 from app.schemas.hospital import HospitalCreate, HospitalResponse
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
+
 
 # =========================================================
 # MOCK DATABASE (used for deployment/demo – no PostgreSQL)
